@@ -6,7 +6,7 @@
 
 const CONFIG = {
   ALLOWED_ORIGINS: [
-    "https://YOUR_USERNAME.github.io",
+    "https://eazypyz.github.io",
     "http://localhost:3000",
     "http://localhost:8080",
     "http://127.0.0.1:3000",

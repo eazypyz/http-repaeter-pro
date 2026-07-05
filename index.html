@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Repeater Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- CodeMirror 6 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/dracula.min.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "codemirror": "https://cdn.jsdelivr.net/npm/codemirror@6.0.1/dist/index.js",
+            "@codemirror/lang-json": "https://cdn.jsdelivr.net/npm/@codemirror/lang-json@6.0.1/dist/index.js",
+            "@codemirror/lang-xml": "https://cdn.jsdelivr.net/npm/@codemirror/lang-xml@6.0.2/dist/index.js",
+            "@codemirror/lang-javascript": "https://cdn.jsdelivr.net/npm/@codemirror/lang-javascript@6.2.1/dist/index.js",
+            "@codemirror/lang-html": "https://cdn.jsdelivr.net/npm/@codemirror/lang-html@6.4.8/dist/index.js",
+            "@codemirror/view": "https://cdn.jsdelivr.net/npm/@codemirror/view@6.23.0/dist/index.js",
+            "@codemirror/state": "https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.0/dist/index.js",
+            "@codemirror/commands": "https://cdn.jsdelivr.net/npm/@codemirror/commands@6.3.2/dist/index.js",
+            "@codemirror/search": "https://cdn.jsdelivr.net/npm/@codemirror/search@6.5.5/dist/index.js",
+            "@codemirror/language": "https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.0/dist/index.js",
+            "@codemirror/autocomplete": "https://cdn.jsdelivr.net/npm/@codemirror/autocomplete@6.11.1/dist/index.js",
+            "@codemirror/lint": "https://cdn.jsdelivr.net/npm/@codemirror/lint@6.4.2/dist/index.js",
+            "@lezer/highlight": "https://cdn.jsdelivr.net/npm/@lezer/highlight@1.2.0/dist/index.js"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <!-- Toolbar -->
+        <header class="toolbar">
+            <div class="toolbar-left">
+                <div class="logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    <span>HTTP Repeater Pro</span>
+                </div>
+                <div class="toolbar-separator"></div>
+                <button id="btn-send" class="btn btn-primary" title="Send Request (Ctrl+Enter)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Send
+                </button>
+                <button id="btn-cancel" class="btn btn-secondary" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="6" y="4" width="12" height="16" rx="2"/>
+                    </svg>
+                    Cancel
+                </button>
+                <div class="toolbar-separator"></div>
+                <button id="btn-undo" class="btn btn-icon" title="Undo">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                    </svg>
+                </button>
+                <button id="btn-redo" class="btn btn-icon" title="Redo">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+                    </svg>
+                </button>
+                <div class="toolbar-separator"></div>
+                <button id="btn-beautify" class="btn btn-icon" title="Beautify">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                </button>
+                <button id="btn-wrap" class="btn btn-icon" title="Toggle Word Wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 6h16M4 12h16M4 18h10"/>
+                    </svg>
+                </button>
+                <div class="toolbar-separator"></div>
+                <button id="btn-import-curl" class="btn btn-secondary">Import cURL</button>
+                <button id="btn-export-curl" class="btn btn-secondary">Export cURL</button>
+                <button id="btn-save-session" class="btn btn-secondary">Save Session</button>
+                <button id="btn-load-session" class="btn btn-secondary">Load Session</button>
+                <input type="file" id="session-file-input" accept=".json" style="display:none">
+            </div>
+            <div class="toolbar-right">
+                <button id="btn-settings" class="btn btn-icon" title="Settings">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar" id="request-tabs">
+            <div class="tabs-container" id="tabs-container"></div>
+            <button id="btn-new-tab" class="btn btn-icon btn-new-tab" title="New Tab">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Request Panel -->
+            <div class="panel panel-request" id="panel-request">
+                <div class="panel-header">
+                    <span class="panel-title">Request</span>
+                    <div class="panel-actions">
+                        <button id="btn-clear-request" class="btn btn-icon-sm" title="Clear">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Request Controls -->
+                <div class="request-controls">
+                    <select id="method-select" class="method-select">
+                        <option value="GET" selected>GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="OPTIONS">OPTIONS</option>
+                        <option value="HEAD">HEAD</option>
+                        <option value="CONNECT">CONNECT</option>
+                        <option value="TRACE">TRACE</option>
+                    </select>
+                    <input type="text" id="url-input" class="url-input" placeholder="https://example.com/api" value="https://httpbin.org/get">
+                    <button id="btn-encode-url" class="btn btn-icon-sm" title="URL Encode">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Request Sub-tabs -->
+                <div class="sub-tabs">
+                    <button class="sub-tab active" data-tab="raw">Raw</button>
+                    <button class="sub-tab" data-tab="headers">Headers</button>
+                    <button class="sub-tab" data-tab="query">Query</button>
+                    <button class="sub-tab" data-tab="body">Body</button>
+                    <button class="sub-tab" data-tab="auth">Auth</button>
+                    <button class="sub-tab" data-tab="cookies">Cookies</button>
+                </div>
+
+                <!-- Request Content -->
+                <div class="request-content">
+                    <div class="sub-tab-content active" id="tab-raw">
+                        <div id="editor-request" class="editor"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-headers">
+                        <div class="table-editor" id="headers-editor"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-query">
+                        <div class="table-editor" id="query-editor"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-body">
+                        <div class="body-controls">
+                            <select id="body-type" class="body-type-select">
+                                <option value="none">None</option>
+                                <option value="raw">Raw</option>
+                                <option value="json">JSON</option>
+                                <option value="xml">XML</option>
+                                <option value="text">Text</option>
+                                <option value="form">Form URL Encoded</option>
+                                <option value="multipart">Multipart</option>
+                                <option value="binary">Binary</option>
+                            </select>
+                        </div>
+                        <div id="editor-body" class="editor"></div>
+                        <div class="binary-upload" id="binary-upload" style="display:none">
+                            <input type="file" id="binary-file">
+                        </div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-auth">
+                        <div class="auth-section">
+                            <select id="auth-type" class="auth-type-select">
+                                <option value="none">No Auth</option>
+                                <option value="bearer">Bearer Token</option>
+                                <option value="basic">Basic Auth</option>
+                                <option value="apikey">API Key</option>
+                                <option value="jwt">JWT</option>
+                                <option value="cookie">Cookie</option>
+                            </select>
+                            <div id="auth-config" class="auth-config"></div>
+                        </div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-cookies">
+                        <div class="table-editor" id="cookies-editor"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resizer -->
+            <div class="resizer" id="resizer"></div>
+
+            <!-- Response Panel -->
+            <div class="panel panel-response" id="panel-response">
+                <div class="panel-header">
+                    <span class="panel-title">Response</span>
+                    <div class="panel-actions">
+                        <button id="btn-copy-response" class="btn btn-icon-sm" title="Copy Response">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                        </button>
+                        <button id="btn-save-response" class="btn btn-icon-sm" title="Save Response">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Response Info -->
+                <div class="response-info" id="response-info">
+                    <span class="status-badge" id="status-badge">Ready</span>
+                    <span class="info-item" id="response-time"></span>
+                    <span class="info-item" id="response-size"></span>
+                </div>
+
+                <!-- Response Sub-tabs -->
+                <div class="sub-tabs">
+                    <button class="sub-tab active" data-tab="response-pretty">Pretty</button>
+                    <button class="sub-tab" data-tab="response-raw">Raw</button>
+                    <button class="sub-tab" data-tab="response-hex">Hex</button>
+                    <button class="sub-tab" data-tab="response-headers">Headers</button>
+                    <button class="sub-tab" data-tab="response-cookies">Cookies</button>
+                </div>
+
+                <!-- Response Content -->
+                <div class="response-content">
+                    <div class="sub-tab-content active" id="tab-response-pretty">
+                        <div id="editor-response" class="editor"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-response-raw">
+                        <div id="editor-response-raw" class="editor"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-response-hex">
+                        <div id="editor-response-hex" class="editor hex-editor"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-response-headers">
+                        <div id="response-headers-view" class="headers-view"></div>
+                    </div>
+                    <div class="sub-tab-content" id="tab-response-cookies">
+                        <div id="response-cookies-view" class="cookies-view"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="status-text">Ready</span>
+            </div>
+            <div class="status-right">
+                <span id="cursor-pos">Ln 1, Col 1</span>
+                <span class="status-separator"></span>
+                <span id="encoding-info">UTF-8</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

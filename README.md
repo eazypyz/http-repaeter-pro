@@ -1,143 +1,182 @@
 # HTTP Repeater Pro
 
-Aplikasi web HTTP Repeater modern terinspirasi Burp Suite Repeater.
-Frontend statis (HTML/CSS/Vanilla JS + CodeMirror 6) di-host di **GitHub Pages**,
-seluruh request diteruskan lewat **Cloudflare Worker** sebagai reverse proxy agar
-browser tidak pernah fetch langsung ke target (menghindari CORS & menyembunyikan asal request).
+A modern HTTP Repeater inspired by Burp Suite, built with vanilla JavaScript and powered by Cloudflare Workers.
+
+![Dark Theme](https://img.shields.io/badge/theme-dark-blue)
+![Vanilla JS](https://img.shields.io/badge/framework-vanilla%20JS-yellow)
+![Cloudflare Workers](https://img.shields.io/badge/backend-Cloudflare%20Workers-orange)
+
+## Features
+
+### Request Editor
+- Raw HTTP editor with CodeMirror 6
+- Syntax highlighting (JSON, XML, HTML, JavaScript)
+- Line numbers, search, replace, undo/redo
+- Word wrap toggle
+- Auto-complete HTTP headers
+- Table-based header/query/cookie editor
+- Multiple body types: Raw, JSON, XML, Text, Form, Multipart, Binary
+- Authentication: Bearer, Basic, API Key, JWT, Cookie
+
+### Response Viewer
+- Status code with color coding
+- Response time & size
+- Pretty JSON/XML/HTML view
+- Raw view
+- Hex dump view
+- Response headers & cookies
+- Copy & save response
+
+### Tabs
+- Unlimited tabs
+- Duplicate tab (Ctrl+L)
+- Close tab (Ctrl+W)
+- Session history
+
+### Import/Export
+- Import cURL command
+- Export to cURL
+- Save session to JSON
+- Load session from JSON
+
+### Utilities
+- UUID generator
+- Base64 encode/decode
+- URL encode/decode
+- SHA-256 hash
+- JWT decode
+- Timestamp tools
+
+### Keyboard Shortcuts
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+Enter | Send Request |
+| Ctrl+L | Duplicate Tab |
+| Ctrl+W | Close Tab |
+| Ctrl+S | Save Session |
+| Ctrl+Shift+C | Copy cURL |
+
+## Architecture
 
 ```
-Browser → GitHub Pages (frontend statis) → Cloudflare Worker (proxy) → Target Website
+Browser (GitHub Pages)
+    ↓
+Cloudflare Worker (CORS Proxy)
+    ↓
+Target Website
 ```
 
-## Struktur Folder
+All HTTP requests go through the Cloudflare Worker to bypass CORS restrictions.
+
+## File Structure
 
 ```
 http-repeater-pro/
-├── frontend/                 # Deploy folder ini ke GitHub Pages
-│   ├── index.html
-│   ├── style.css
-│   ├── app.js                 # entry point, orkestrasi utama
-│   ├── editor.js               # wrapper CodeMirror 6
-│   ├── tabs.js                 # model & render tab
-│   ├── history.js              # riwayat request + closed-tab restore
-│   ├── curl.js                  # import/export cURL & Raw HTTP
-│   └── beautify.js              # pretty-printer JSON/HTML/XML/JS + hex dump
-└── cloudflare-worker/
-    ├── worker.js               # reverse proxy + validasi keamanan
-    └── wrangler.toml
+├── index.html      # Main HTML
+├── style.css       # Dark theme styles
+├── app.js          # Main application logic
+├── editor.js       # CodeMirror 6 integration
+├── tabs.js         # Tab management
+├── history.js      # Request history
+├── curl.js         # cURL parser/generator
+├── beautify.js     # Code beautification
+└── worker.js       # Cloudflare Worker backend
 ```
 
-## 1. Deploy Cloudflare Worker
+## Deployment
 
-```bash
-cd cloudflare-worker
-npm install -g wrangler   # jika belum ada
-wrangler login
+### 1. Deploy Cloudflare Worker
+
+1. Go to [Cloudflare Workers Dashboard](https://dash.cloudflare.com/)
+2. Create a new Worker
+3. Paste the contents of `worker.js`
+4. Update `ALLOWED_ORIGINS` with your GitHub Pages URL:
+   ```javascript
+   ALLOWED_ORIGINS: [
+     "https://YOUR_USERNAME.github.io",
+   ]
+   ```
+5. Deploy and note your Worker URL (e.g., `https://your-worker.workers.dev`)
+
+### 2. Update Frontend
+
+In `app.js`, update the Worker URL:
+```javascript
+const CONFIG = {
+    WORKER_URL: 'https://your-worker.workers.dev',
+    // ...
+};
 ```
 
-Edit `worker.js`, sesuaikan whitelist origin:
+### 3. Deploy to GitHub Pages
 
-```js
-const ALLOWED_ORIGINS = [
-  "https://USERNAME.github.io", // ganti dengan domain GitHub Pages kamu
-];
+1. Create a new repository on GitHub
+2. Push all files (except `worker.js`) to the repository
+3. Go to Settings → Pages
+4. Select source: Deploy from a branch → main
+5. Your app will be live at `https://YOUR_USERNAME.github.io/REPO_NAME`
+
+### 4. Update Worker CORS
+
+Go back to your Cloudflare Worker and update `ALLOWED_ORIGINS`:
+```javascript
+ALLOWED_ORIGINS: [
+    "https://YOUR_USERNAME.github.io",
+    "https://YOUR_USERNAME.github.io/REPO_NAME",
+]
 ```
 
-Deploy:
+## Security Features
 
-```bash
-wrangler deploy
-```
+- Whitelist-based CORS origin validation
+- Blocks localhost & private IP addresses
+- Request/response size limits (10MB)
+- Request timeout with retry logic
+- Input validation on URL format
 
-Catat URL worker yang muncul, contoh:
-`https://http-repeater-pro.<subdomain>.workers.dev`
+## API Endpoint
 
-## 2. Deploy Frontend ke GitHub Pages
+### POST /request
 
-1. Push folder `frontend/` ke repo GitHub (bisa di branch `main` atau `gh-pages`).
-2. Di **Settings → Pages**, arahkan source ke folder tersebut.
-3. Buka situs GitHub Pages kamu, klik **⚙ Settings** di toolbar aplikasi,
-   masukkan URL Cloudflare Worker dari langkah 1, simpan.
-
-Tidak ada proses build — semua modul dimuat sebagai ES Module native di browser,
-dan CodeMirror 6 dimuat langsung dari CDN (esm.sh) di dalam `editor.js`.
-
-## Keamanan (SSRF & Abuse Protection)
-
-Worker (`worker.js`) menerapkan:
-
-- **Whitelist origin** — hanya origin di `ALLOWED_ORIGINS` yang boleh memanggil worker.
-- **Validasi skema URL** — hanya `http:` dan `https:` yang diizinkan.
-- **Blokir target privat** — `localhost`, `127.0.0.1`, `::1`, rentang IP privat
-  (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, link-local, dsb.), dan
-  endpoint metadata cloud (`169.254.169.254`) ditolak untuk mencegah SSRF.
-- **Batas ukuran** request (`MAX_REQUEST_SIZE`) dan response (`MAX_RESPONSE_SIZE`).
-- **Timeout & retry** terkonfigurasi (`FETCH_TIMEOUT_MS`, `MAX_RETRIES`).
-- **Format error JSON konsisten**: `{ error: true, code, message }`.
-
-> Alat ini ditujukan untuk pengujian API/keamanan pada target yang **kamu miliki
-> izin untuk mengujinya** (mis. environment milikmu sendiri atau program bug bounty
-> yang mengizinkan tooling semacam ini). Jangan gunakan untuk mengakses sistem
-> tanpa otorisasi.
-
-## Catatan Implementasi & Batasan yang Diketahui
-
-- **Kompresi (gzip/br/deflate)**: ditangani otomatis oleh `fetch()` di Cloudflare
-  Workers runtime (dekompresi transparan) — tidak perlu penanganan manual.
-- **Streaming response**: worker membaca body dengan `ReadableStream` reader dan
-  membatasi ukuran total sesuai `MAX_RESPONSE_SIZE`, lalu mengirim hasil akhir
-  sebagai satu JSON response ke frontend (bukan streaming byte-per-byte ke browser,
-  karena payload dibungkus JSON `{status, headers, body, ...}`).
-- **Timing granular** (DNS/TLS/Connect time terpisah): Cloudflare Workers `fetch()`
-  standar tidak mengekspos angka ini secara terpisah. Worker melaporkan `ttfb` dan
-  `total` time yang tersedia; DNS/TLS/Connect ditampilkan sebagai "—" di UI jika
-  tidak tersedia.
-- **Multipart & Binary**: dikonstruksi di frontend (`app.js`) sebagai body biner
-  yang di-base64-encode, lalu didekode kembali oleh worker sebelum diteruskan ke target.
-- **Hex view**: dihasilkan dari body response (didekode dari base64 bila biner).
-- **Beautify HTML/XML/JS**: implementasi ringan berbasis indentasi tag/kurung,
-  cukup untuk keterbacaan viewer — bukan pretty-printer AST penuh.
-
-## Keyboard Shortcuts
-
-| Shortcut | Aksi |
-|---|---|
-| `Ctrl+Enter` | Send request |
-| `Ctrl+T` | Tab baru |
-| `Ctrl+L` | Duplicate tab aktif |
-| `Ctrl+W` | Close tab aktif |
-| `Ctrl+Shift+T` | Restore tab yang baru ditutup |
-| `Ctrl+S` | Save session (export JSON) |
-| `Ctrl+Shift+C` | Copy request aktif sebagai cURL |
-
-## Format Komunikasi Frontend ↔ Worker
-
-**Request** (`POST /request`):
+Request body:
 ```json
 {
-  "url": "https://example.com/api/users?id=1",
-  "method": "GET",
-  "headers": { "Authorization": "Bearer xxx" },
-  "body": "",
-  "bodyIsBase64": false
+  "url": "https://api.example.com/data",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer token"
+  },
+  "body": "{\"key\":\"value\"}",
+  "timeout": 30000
 }
 ```
 
-**Response**:
+Response:
 ```json
 {
   "status": 200,
   "statusText": "OK",
-  "headers": { "content-type": "application/json" },
+  "headers": { ... },
   "body": "...",
-  "bodyIsBase64": false,
-  "size": 12345,
-  "time": 123,
-  "timing": { "ttfb": 80, "total": 123 }
+  "time": 234,
+  "size": 1234,
+  "url": "https://api.example.com/data",
+  "redirected": false
 }
 ```
 
-**Error** (format konsisten):
-```json
-{ "error": true, "code": "PROXY_ERROR", "message": "Gagal menghubungi target: ..." }
-```
+### GET /health
+
+Health check endpoint for monitoring.
+
+## Browser Support
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+## License
+
+MIT License

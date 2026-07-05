@@ -7,7 +7,7 @@ import { Beautify } from './beautify.js';
 
 // ==================== CONFIG ====================
 const CONFIG = {
-    WORKER_URL: 'https://YOUR_WORKER_SUBDOMAIN.workers.dev',
+    WORKER_URL: 'http-repaeter-pro.airdrop445.workers.dev',
     TIMEOUT: 30000,
     MAX_REQUEST_SIZE: 10 * 1024 * 1024,
     MAX_RESPONSE_SIZE: 10 * 1024 * 1024

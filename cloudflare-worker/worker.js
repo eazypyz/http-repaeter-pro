@@ -19,7 +19,7 @@
 
 /** Origin frontend yang diizinkan mengakses worker ini. */
 const ALLOWED_ORIGINS = [
-  "https://USERNAME.github.io",
+  "https://eazypyz.github.io",
   "http://localhost:5173",     // dev lokal (boleh dihapus di production)
   "http://127.0.0.1:5173",
 ];

@@ -24,6 +24,8 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
 ];
 
+const WORKER_URL = "https://empty-disk-47c9.airdrop445.workers.dev/";
+
 /** Batas ukuran request body yang dikirim ke worker (bytes). */
 const MAX_REQUEST_SIZE = 10 * 1024 * 1024; // 10 MB
 

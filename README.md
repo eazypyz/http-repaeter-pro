@@ -2,181 +2,82 @@
 
 A modern HTTP Repeater inspired by Burp Suite, built with vanilla JavaScript and powered by Cloudflare Workers.
 
-![Dark Theme](https://img.shields.io/badge/theme-dark-blue)
-![Vanilla JS](https://img.shields.io/badge/framework-vanilla%20JS-yellow)
-![Cloudflare Workers](https://img.shields.io/badge/backend-Cloudflare%20Workers-orange)
+## Quick Deploy Guide
+
+### Step 1: Deploy Cloudflare Worker
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create
+2. Choose "Create Worker"
+3. Replace the default code with the contents of `worker.js`
+4. **IMPORTANT**: Update `ALLOWED_ORIGINS` in `worker.js`:
+   ```javascript
+   ALLOWED_ORIGINS: [
+     "https://YOUR_USERNAME.github.io",
+     "https://YOUR_USERNAME.github.io/http-repeater-pro",
+   ]
+   ```
+5. Click "Deploy" and copy your Worker URL (e.g., `https://repeater.YOUR_SUBDOMAIN.workers.dev`)
+
+### Step 2: Update Frontend
+
+In `app.js`, find this line:
+```javascript
+const CONFIG = {
+    WORKER_URL: 'https://YOUR_WORKER_SUBDOMAIN.workers.dev',
+```
+Replace with your actual Worker URL.
+
+### Step 3: Deploy to GitHub Pages
+
+1. Create a new GitHub repository
+2. Upload all frontend files (`index.html`, `style.css`, `app.js`, `editor.js`, `tabs.js`, `history.js`, `curl.js`, `beautify.js`)
+3. Go to Settings → Pages → Source: Deploy from a branch → main
+4. Wait a few minutes, then visit `https://YOUR_USERNAME.github.io/REPO_NAME`
+
+### Step 4: Test
+
+1. Open your GitHub Pages URL
+2. The loading screen should disappear and show the UI
+3. Enter a test URL like `https://httpbin.org/get`
+4. Click **Send** or press **Ctrl+Enter**
+
+## Why Buttons Might Not Work
+
+| Problem | Solution |
+|---------|----------|
+| Opening `file://` directly | Must use HTTP server (GitHub Pages, `npx serve`, Python `http.server`) |
+| CodeMirror fails to load | Check browser console for import errors; esm.sh CDN should work |
+| CORS errors | Worker `ALLOWED_ORIGINS` must match your GitHub Pages URL exactly |
+| Worker URL wrong | Update `WORKER_URL` in `app.js` |
+
+## Local Testing
+
+```bash
+# Serve locally (requires Node.js)
+npx serve .
+
+# Or with Python
+python3 -m http.server 8080
+
+# Then open http://localhost:8080
+```
 
 ## Features
 
-### Request Editor
-- Raw HTTP editor with CodeMirror 6
-- Syntax highlighting (JSON, XML, HTML, JavaScript)
-- Line numbers, search, replace, undo/redo
-- Word wrap toggle
-- Auto-complete HTTP headers
-- Table-based header/query/cookie editor
-- Multiple body types: Raw, JSON, XML, Text, Form, Multipart, Binary
-- Authentication: Bearer, Basic, API Key, JWT, Cookie
-
-### Response Viewer
-- Status code with color coding
-- Response time & size
-- Pretty JSON/XML/HTML view
-- Raw view
-- Hex dump view
-- Response headers & cookies
-- Copy & save response
-
-### Tabs
-- Unlimited tabs
-- Duplicate tab (Ctrl+L)
-- Close tab (Ctrl+W)
-- Session history
-
-### Import/Export
-- Import cURL command
-- Export to cURL
-- Save session to JSON
-- Load session from JSON
-
-### Utilities
-- UUID generator
-- Base64 encode/decode
-- URL encode/decode
-- SHA-256 hash
-- JWT decode
-- Timestamp tools
-
-### Keyboard Shortcuts
-| Shortcut | Action |
-|----------|--------|
-| Ctrl+Enter | Send Request |
-| Ctrl+L | Duplicate Tab |
-| Ctrl+W | Close Tab |
-| Ctrl+S | Save Session |
-| Ctrl+Shift+C | Copy cURL |
+- **9 HTTP Methods**: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD, CONNECT, TRACE
+- **CodeMirror 6 Editor**: Syntax highlighting, auto-complete, search/replace
+- **CORS Proxy**: All requests via Cloudflare Worker
+- **Security**: Whitelist origins, block localhost/private IPs, size limits
+- **Utilities**: UUID, Base64, URL encode/decode, SHA-256, JWT decode
+- **Keyboard Shortcuts**: Ctrl+Enter (Send), Ctrl+L (Duplicate), Ctrl+W (Close), Ctrl+S (Save)
+- **Import/Export**: cURL, Raw HTTP, Session JSON
 
 ## Architecture
 
 ```
 Browser (GitHub Pages)
     ↓
-Cloudflare Worker (CORS Proxy)
+Cloudflare Worker (CORS Proxy + Security)
     ↓
 Target Website
 ```
-
-All HTTP requests go through the Cloudflare Worker to bypass CORS restrictions.
-
-## File Structure
-
-```
-http-repeater-pro/
-├── index.html      # Main HTML
-├── style.css       # Dark theme styles
-├── app.js          # Main application logic
-├── editor.js       # CodeMirror 6 integration
-├── tabs.js         # Tab management
-├── history.js      # Request history
-├── curl.js         # cURL parser/generator
-├── beautify.js     # Code beautification
-└── worker.js       # Cloudflare Worker backend
-```
-
-## Deployment
-
-### 1. Deploy Cloudflare Worker
-
-1. Go to [Cloudflare Workers Dashboard](https://dash.cloudflare.com/)
-2. Create a new Worker
-3. Paste the contents of `worker.js`
-4. Update `ALLOWED_ORIGINS` with your GitHub Pages URL:
-   ```javascript
-   ALLOWED_ORIGINS: [
-     "https://YOUR_USERNAME.github.io",
-   ]
-   ```
-5. Deploy and note your Worker URL (e.g., `https://your-worker.workers.dev`)
-
-### 2. Update Frontend
-
-In `app.js`, update the Worker URL:
-```javascript
-const CONFIG = {
-    WORKER_URL: 'https://your-worker.workers.dev',
-    // ...
-};
-```
-
-### 3. Deploy to GitHub Pages
-
-1. Create a new repository on GitHub
-2. Push all files (except `worker.js`) to the repository
-3. Go to Settings → Pages
-4. Select source: Deploy from a branch → main
-5. Your app will be live at `https://YOUR_USERNAME.github.io/REPO_NAME`
-
-### 4. Update Worker CORS
-
-Go back to your Cloudflare Worker and update `ALLOWED_ORIGINS`:
-```javascript
-ALLOWED_ORIGINS: [
-    "https://YOUR_USERNAME.github.io",
-    "https://YOUR_USERNAME.github.io/REPO_NAME",
-]
-```
-
-## Security Features
-
-- Whitelist-based CORS origin validation
-- Blocks localhost & private IP addresses
-- Request/response size limits (10MB)
-- Request timeout with retry logic
-- Input validation on URL format
-
-## API Endpoint
-
-### POST /request
-
-Request body:
-```json
-{
-  "url": "https://api.example.com/data",
-  "method": "POST",
-  "headers": {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer token"
-  },
-  "body": "{\"key\":\"value\"}",
-  "timeout": 30000
-}
-```
-
-Response:
-```json
-{
-  "status": 200,
-  "statusText": "OK",
-  "headers": { ... },
-  "body": "...",
-  "time": 234,
-  "size": 1234,
-  "url": "https://api.example.com/data",
-  "redirected": false
-}
-```
-
-### GET /health
-
-Health check endpoint for monitoring.
-
-## Browser Support
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## License
-
-MIT License

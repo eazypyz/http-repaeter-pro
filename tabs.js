@@ -1,3 +1,4 @@
+
 import { Editor } from './editor.js';
 
 class Tab {
@@ -10,14 +11,11 @@ class Tab {
         this.bodyEditor = null;
         this.responseEditor = null;
         this.responseRawEditor = null;
-        this.responseHexEditor = null;
         this.wordWrap = false;
-
         this.init();
     }
 
     init() {
-        // Create request editor
         const reqEl = document.getElementById('editor-request');
         reqEl.innerHTML = '';
         this.requestEditor = this.editor.create(reqEl, {
@@ -25,10 +23,8 @@ class Tab {
             value: 'GET /api/users?id=1 HTTP/1.1\nHost: example.com\nUser-Agent: Mozilla/5.0\n\n'
         });
 
-        // Setup body editor
         this.setupBodyEditor('none');
 
-        // Setup response editors
         const respEl = document.getElementById('editor-response');
         respEl.innerHTML = '';
         this.responseEditor = this.editor.create(respEl, { language: 'json', readOnly: true });
@@ -37,7 +33,6 @@ class Tab {
         respRawEl.innerHTML = '';
         this.responseRawEditor = this.editor.create(respRawEl, { readOnly: true });
 
-        // Setup table editors
         this.setupTableEditor('headers-editor');
         this.setupTableEditor('query-editor');
         this.setupTableEditor('cookies-editor');
@@ -46,7 +41,6 @@ class Tab {
     setupBodyEditor(type) {
         const bodyEl = document.getElementById('editor-body');
         bodyEl.innerHTML = '';
-
         let lang = 'text';
         switch(type) {
             case 'json': lang = 'json'; break;
@@ -54,7 +48,6 @@ class Tab {
             case 'html': lang = 'html'; break;
             case 'javascript': lang = 'javascript'; break;
         }
-
         this.bodyEditor = this.editor.create(bodyEl, { language: lang });
     }
 
@@ -65,13 +58,9 @@ class Tab {
         const addBtn = document.createElement('button');
         addBtn.className = 'add-row-btn';
         addBtn.textContent = '+ Add Row';
-        addBtn.addEventListener('click', () => {
-            this.addTableRow(containerId);
-        });
-
+        addBtn.addEventListener('click', () => this.addTableRow(containerId));
         container.appendChild(addBtn);
 
-        // Add default rows
         if (containerId === 'headers-editor') {
             this.addTableRow(containerId, 'User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
             this.addTableRow(containerId, 'Accept', 'application/json');
@@ -84,26 +73,20 @@ class Tab {
 
         const row = document.createElement('div');
         row.className = 'table-row';
-        row.innerHTML = `
-            <input type="checkbox" class="row-toggle" checked>
-            <input type="text" placeholder="Key" value="${key}">
-            <input type="text" placeholder="Value" value="${value}">
-            <div class="row-actions">
-                <button class="row-btn" title="Duplicate">⧉</button>
-                <button class="row-btn danger" title="Delete">✕</button>
-            </div>
-        `;
+        row.innerHTML = '<input type="checkbox" class="row-toggle" checked><input type="text" placeholder="Key" value="' + this.escapeAttr(key) + '"><input type="text" placeholder="Value" value="' + this.escapeAttr(value) + '"><div class="row-actions"><button class="row-btn" title="Duplicate">&#10629;</button><button class="row-btn danger" title="Delete">&#10005;</button></div>';
 
         row.querySelector('.row-btn[title="Duplicate"]').addEventListener('click', () => {
             const inputs = row.querySelectorAll('input[type="text"]');
             this.addTableRow(containerId, inputs[0].value, inputs[1].value);
         });
 
-        row.querySelector('.row-btn[title="Delete"]').addEventListener('click', () => {
-            row.remove();
-        });
+        row.querySelector('.row-btn[title="Delete"]').addEventListener('click', () => row.remove());
 
         container.insertBefore(row, addBtn);
+    }
+
+    escapeAttr(s) {
+        return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     setResponseBody(content, contentType) {
@@ -115,42 +98,37 @@ class Tab {
 
         const el = document.getElementById('editor-response');
         el.innerHTML = '';
-        this.responseEditor = this.editor.create(el, { language: lang, readOnly: true, value: content });
+        this.responseEditor = this.editor.create(el, { language: lang, readOnly: true, value: content || '' });
     }
 
     setResponseRaw(content) {
         const el = document.getElementById('editor-response-raw');
         el.innerHTML = '';
-        this.responseRawEditor = this.editor.create(el, { readOnly: true, value: content });
+        this.responseRawEditor = this.editor.create(el, { readOnly: true, value: content || '' });
     }
 
     setResponseHex(content) {
         const el = document.getElementById('editor-response-hex');
-        el.innerHTML = '';
-
         const encoder = new TextEncoder();
-        const bytes = encoder.encode(content);
+        const bytes = encoder.encode(content || '');
         let hexOutput = '';
-
         for (let i = 0; i < bytes.length; i += 16) {
             const offset = i.toString(16).padStart(8, '0');
             const chunk = bytes.slice(i, i + 16);
             const hexBytes = Array.from(chunk).map(b => b.toString(16).padStart(2, '0')).join(' ');
             const ascii = Array.from(chunk).map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : '.').join('');
-            hexOutput += `<span class="hex-offset">${offset}</span> <span class="hex-byte">${hexBytes.padEnd(48, ' ')}</span> <span class="hex-ascii">${ascii}</span>\n`;
+            hexOutput += '<span class="hex-offset">' + offset + '</span> <span class="hex-byte">' + hexBytes.padEnd(48, ' ') + '</span> <span class="hex-ascii">' + ascii + '</span>\n';
         }
-
         el.innerHTML = hexOutput;
     }
 
     setResponseHeaders(headers) {
         const container = document.getElementById('response-headers-view');
         container.innerHTML = '';
-
-        Object.entries(headers).forEach(([key, value]) => {
+        Object.entries(headers || {}).forEach(([key, value]) => {
             const row = document.createElement('div');
             row.className = 'header-row';
-            row.innerHTML = `<span class="header-name">${this.escapeHtml(key)}</span><span class="header-value">${this.escapeHtml(String(value))}</span>`;
+            row.innerHTML = '<span class="header-name">' + this.escapeHtml(key) + '</span><span class="header-value">' + this.escapeHtml(String(value)) + '</span>';
             container.appendChild(row);
         });
     }
@@ -158,18 +136,16 @@ class Tab {
     setResponseCookies(headers) {
         const container = document.getElementById('response-cookies-view');
         container.innerHTML = '';
-
         const setCookie = headers['set-cookie'] || headers['Set-Cookie'];
         if (!setCookie) {
             container.innerHTML = '<div style="color:var(--text-muted);padding:12px">No cookies in response</div>';
             return;
         }
-
         const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
         cookies.forEach(cookie => {
             const row = document.createElement('div');
             row.className = 'cookie-row';
-            row.innerHTML = `<span class="cookie-value">${this.escapeHtml(cookie)}</span>`;
+            row.innerHTML = '<span class="cookie-value">' + this.escapeHtml(cookie) + '</span>';
             container.appendChild(row);
         });
     }
@@ -180,8 +156,6 @@ class Tab {
 
     toggleWordWrap() {
         this.wordWrap = !this.wordWrap;
-        // CodeMirror 6 word wrap is handled via lineWrapping extension
-        // For simplicity, we'll just refresh
         this.refreshEditors();
     }
 
@@ -193,14 +167,10 @@ class Tab {
 
     clear() {
         if (this.requestEditor) {
-            this.requestEditor.dispatch({
-                changes: { from: 0, to: this.requestEditor.state.doc.length, insert: '' }
-            });
+            this.requestEditor.dispatch({ changes: { from: 0, to: this.requestEditor.state.doc.length, insert: '' } });
         }
         if (this.bodyEditor) {
-            this.bodyEditor.dispatch({
-                changes: { from: 0, to: this.bodyEditor.state.doc.length, insert: '' }
-            });
+            this.bodyEditor.dispatch({ changes: { from: 0, to: this.bodyEditor.state.doc.length, insert: '' } });
         }
         this.setupTableEditor('headers-editor');
         this.setupTableEditor('query-editor');
@@ -214,8 +184,7 @@ class Tab {
 
     getData() {
         return {
-            id: this.id,
-            name: this.name,
+            id: this.id, name: this.name,
             method: document.getElementById('method-select').value,
             url: document.getElementById('url-input').value,
             headers: this.getTableData('headers-editor'),
@@ -229,8 +198,7 @@ class Tab {
 
     getTableData(containerId) {
         const data = {};
-        const rows = document.querySelectorAll(`#${containerId} .table-row`);
-        rows.forEach(row => {
+        document.querySelectorAll('#' + containerId + ' .table-row').forEach(row => {
             const checkbox = row.querySelector('.row-toggle');
             if (checkbox && checkbox.checked) {
                 const inputs = row.querySelectorAll('input[type="text"]');
@@ -250,14 +218,10 @@ class Tab {
             this.setupBodyEditor(data.bodyType);
         }
         if (data.body && this.bodyEditor) {
-            this.bodyEditor.dispatch({
-                changes: { from: 0, to: this.bodyEditor.state.doc.length, insert: data.body }
-            });
+            this.bodyEditor.dispatch({ changes: { from: 0, to: this.bodyEditor.state.doc.length, insert: data.body } });
         }
         if (data.requestRaw && this.requestEditor) {
-            this.requestEditor.dispatch({
-                changes: { from: 0, to: this.requestEditor.state.doc.length, insert: data.requestRaw }
-            });
+            this.requestEditor.dispatch({ changes: { from: 0, to: this.requestEditor.state.doc.length, insert: data.requestRaw } });
         }
         if (data.headers) this.loadTableData('headers-editor', data.headers);
         if (data.query) this.loadTableData('query-editor', data.query);
@@ -266,9 +230,7 @@ class Tab {
     loadTableData(containerId, data) {
         const container = document.getElementById(containerId);
         container.querySelectorAll('.table-row').forEach(r => r.remove());
-        Object.entries(data).forEach(([key, value]) => {
-            this.addTableRow(containerId, key, value);
-        });
+        Object.entries(data).forEach(([key, value]) => this.addTableRow(containerId, key, value));
     }
 
     destroy() {
@@ -290,7 +252,7 @@ class Tabs {
 
     addTab(name) {
         this.tabCounter++;
-        const id = `tab-${this.tabCounter}`;
+        const id = 'tab-' + this.tabCounter;
         const tab = new Tab(id, name, this.app);
         this.tabs.set(id, tab);
         this.renderTabs();
@@ -299,32 +261,24 @@ class Tabs {
     }
 
     duplicateTab(id) {
-        const sourceTab = this.tabs.get(id);
-        if (!sourceTab) return;
-
-        const newTab = this.addTab(`${sourceTab.name} (Copy)`);
-        newTab.loadData(sourceTab.getData());
+        const source = this.tabs.get(id);
+        if (!source) return;
+        const newTab = this.addTab(source.name + ' (Copy)');
+        newTab.loadData(source.getData());
     }
 
     closeTab(id) {
         const tab = this.tabs.get(id);
         if (!tab) return;
-
         this.closedTabs.push(tab.getData());
         if (this.closedTabs.length > 20) this.closedTabs.shift();
-
         tab.destroy();
         this.tabs.delete(id);
-
         if (this.activeTabId === id) {
             const remaining = Array.from(this.tabs.keys());
-            if (remaining.length > 0) {
-                this.switchTab(remaining[remaining.length - 1]);
-            } else {
-                this.addTab('Request 1');
-            }
+            if (remaining.length > 0) this.switchTab(remaining[remaining.length - 1]);
+            else this.addTab('Request 1');
         }
-
         this.renderTabs();
     }
 
@@ -338,24 +292,17 @@ class Tabs {
     switchTab(id) {
         this.activeTabId = id;
         const tab = this.tabs.get(id);
-        if (tab) {
-            this.app.setCurrentTab(tab);
-        }
+        if (tab) this.app.setCurrentTab(tab);
         this.renderTabs();
     }
 
     renderTabs() {
         const container = document.getElementById('tabs-container');
         container.innerHTML = '';
-
         this.tabs.forEach((tab, id) => {
             const el = document.createElement('div');
-            el.className = `tab ${id === this.activeTabId ? 'active' : ''}`;
-            el.innerHTML = `
-                <span>${tab.name}</span>
-                <span class="tab-close">×</span>
-            `;
-
+            el.className = 'tab ' + (id === this.activeTabId ? 'active' : '');
+            el.innerHTML = '<span>' + tab.name + '</span><span class="tab-close">&times;</span>';
             el.addEventListener('click', (e) => {
                 if (e.target.classList.contains('tab-close')) {
                     e.stopPropagation();
@@ -364,25 +311,17 @@ class Tabs {
                     this.switchTab(id);
                 }
             });
-
             container.appendChild(el);
         });
     }
 
-    getTabCount() {
-        return this.tabs.size;
-    }
-
-    getAllTabsData() {
-        return Array.from(this.tabs.values()).map(t => t.getData());
-    }
-
+    getTabCount() { return this.tabs.size; }
+    getAllTabsData() { return Array.from(this.tabs.values()).map(t => t.getData()); }
     loadTabs(tabsData) {
         this.tabs.forEach(t => t.destroy());
         this.tabs.clear();
-
         tabsData.forEach((data, i) => {
-            const tab = this.addTab(data.name || `Request ${i + 1}`);
+            const tab = this.addTab(data.name || 'Request ' + (i + 1));
             tab.loadData(data);
         });
     }
